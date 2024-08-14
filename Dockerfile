@@ -1,21 +1,17 @@
-# Use a base image with Python
-FROM python:3.9-slim
+# Use an official Python runtime as a parent image
+FROM python:3.11-slim
 
-# Set the working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy the requirements file
-COPY requirements.txt /app/
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Copy the startup script
-COPY startup.sh /app/
-RUN chmod +x /app/startup.sh
-
-# Copy the application files
-COPY . /app/
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Make port 2128 available to the world outside this container
 EXPOSE 2128
 
-# Run the startup script
-CMD ["/app/startup.sh"]
+# Run server.py when the container launches
+CMD ["python", "server.py"]
