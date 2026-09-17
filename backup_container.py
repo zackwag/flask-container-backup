@@ -10,25 +10,28 @@ import docker
 # Initialize Docker client
 client = docker.from_env()
 
+
 # Function to stop a Docker container
 def stop_container(container_name):
     try:
         container = client.containers.get(container_name)
         container.stop()
-    except Exception as e:
-        print(f"Error stopping container {container_name}: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - best-effort; the archive step must still run either way
+        print(f"Error stopping container {container_name}: {e!s}")
+
 
 # Function to start a Docker container
 def start_container(container_name):
     try:
         container = client.containers.get(container_name)
         container.start()
-    except Exception as e:
-        print(f"Error starting container {container_name}: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - best-effort; this is called from a `finally` block and must not raise
+        print(f"Error starting container {container_name}: {e!s}")
+
 
 def create_archive(container_name, source_folder, destination_folder):
     # Get today's date in YYYY-MM-DD format
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    today = datetime.datetime.now().strftime("%Y-%m-%d")  # noqa: DTZ005 - local calendar date for the filename, by design
 
     # Define paths for temporary and final archive locations
     archive_name = f"{container_name}_backup_{today}.tar.gz"
@@ -53,27 +56,29 @@ def create_archive(container_name, source_folder, destination_folder):
         os.remove(temp_archive_path)
         print(f"Temporary archive removed: {temp_archive_path}")
 
-    except Exception as e:
-        print(f"Error creating or copying archive: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - CLI script; must fall through to restart the container either way
+        print(f"Error creating or copying archive: {e!s}")
 
     return final_archive_path
 
+
 # Function to delete archives older than retention_days
 def clean_old_archives(destination_folder, retention_days):
-    now = datetime.datetime.now()
-    for file in Path(destination_folder).glob('*_backup_*.tar.gz'):
-        file_creation_time = datetime.datetime.fromtimestamp(file.stat().st_ctime)
+    now = datetime.datetime.now()  # noqa: DTZ005 - naive but consistent with fromtimestamp() below; same clock, same host
+    for file in Path(destination_folder).glob("*_backup_*.tar.gz"):
+        file_creation_time = datetime.datetime.fromtimestamp(file.stat().st_ctime)  # noqa: DTZ006 - see above
         file_age = (now - file_creation_time).days
         if file_age > retention_days:
             os.remove(file)
 
+
 # Main script
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Backup Docker container data.")
-    parser.add_argument('container_name', help="Name of the Docker container to stop and start")
-    parser.add_argument('source_folder', help="Path to the source folder to back up")
-    parser.add_argument('destination_folder', help="Path to the backup storage")
-    parser.add_argument('retention_days', type=int, help="Number of days to retain backups")
+    parser.add_argument("container_name", help="Name of the Docker container to stop and start")
+    parser.add_argument("source_folder", help="Path to the source folder to back up")
+    parser.add_argument("destination_folder", help="Path to the backup storage")
+    parser.add_argument("retention_days", type=int, help="Number of days to retain backups")
     args = parser.parse_args()
 
     container_name = args.container_name
