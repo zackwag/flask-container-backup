@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/zackwag/flask-container-backup/compare/v2.1.1...v2.2.0) (2026-09-17)
+
+
+### Features
+
+* **ci:** add ruff lint + format check ([#8](https://github.com/zackwag/flask-container-backup/issues/8)) ([76ca61f](https://github.com/zackwag/flask-container-backup/commit/76ca61f0ae6ffa03c8e5f5b0cae816af8d6493ff))
+
 ## [2.1.1](https://github.com/zackwag/flask-container-backup/compare/v2.1.0...v2.1.1) (2026-09-17)
 
 
