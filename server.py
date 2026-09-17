@@ -11,11 +11,11 @@ from flask import Flask, jsonify
 app = Flask(__name__)
 
 FLASK_PORT = 2128
-MODE = os.environ.get('MODE', 'spoke').lower()
-CONFIG_DIR = '/app/config'
-RESULT_FILE = os.path.join(CONFIG_DIR, 'backup_result.json')
-CONTAINERS_FILE = os.path.join(CONFIG_DIR, 'containers.json')
-SPOKES_FILE = os.path.join(CONFIG_DIR, 'spokes.json')
+MODE = os.environ.get("MODE", "spoke").lower()
+CONFIG_DIR = "/app/config"
+RESULT_FILE = os.path.join(CONFIG_DIR, "backup_result.json")
+CONTAINERS_FILE = os.path.join(CONFIG_DIR, "containers.json")
+SPOKES_FILE = os.path.join(CONFIG_DIR, "spokes.json")
 
 
 def write_result(status, errors=None, containers_backed_up=None):
@@ -23,9 +23,9 @@ def write_result(status, errors=None, containers_backed_up=None):
         "status": status,
         "errors": errors or [],
         "containers_backed_up": containers_backed_up or [],
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),  # noqa: DTZ005 - local time is fine for a status display timestamp
     }
-    with open(RESULT_FILE, 'w') as f:
+    with open(RESULT_FILE, "w") as f:
         json.dump(result, f)
 
 
@@ -40,18 +40,23 @@ def read_local_result():
 def backup_container(container_name, source_folder, destination_folder, retention_days):
     try:
         command = [
-            'python',
-            'backup_container.py',
+            "python",
+            "backup_container.py",
             container_name,
             source_folder,
             destination_folder,
-            str(retention_days)
+            str(retention_days),
         ]
-        result = subprocess.run(command, capture_output=True, text=True)
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
         print(result.stdout)
+        if result.returncode != 0:
+            print(
+                f"backup_container.py exited {result.returncode} for {container_name}: {result.stderr}"
+            )
+            return False
         return True
-    except Exception as e:
-        print(f"Error backing up container {container_name}: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - background thread must always report True/False, never crash
+        print(f"Error backing up container {container_name}: {e!s}")
         return False
 
 
@@ -59,8 +64,8 @@ def notify_spoke(spoke_url):
     try:
         response = requests.post(f"{spoke_url}/backup", timeout=10)
         return {"spoke": spoke_url, "status": response.status_code}
-    except Exception as e:
-        print(f"Error notifying spoke {spoke_url}: {str(e)}")
+    except Exception as e:  # noqa: BLE001 - one spoke's failure must not abort the others
+        print(f"Error notifying spoke {spoke_url}: {e!s}")
         return {"spoke": spoke_url, "error": str(e)}
 
 
@@ -68,7 +73,7 @@ def get_spoke_status(spoke_url):
     try:
         response = requests.get(f"{spoke_url}/status", timeout=10)
         return {"spoke": spoke_url, "result": response.json()}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 - one spoke's failure must not abort status aggregation
         return {"spoke": spoke_url, "error": str(e)}
 
 
@@ -78,7 +83,7 @@ with open(CONTAINERS_FILE) as f:
 
 # Load spokes if hub mode
 spokes = []
-if MODE == 'hub':
+if MODE == "hub":
     if not os.path.exists(SPOKES_FILE):
         print("FATAL: MODE=hub but spokes.json not found", file=sys.stderr)
         sys.exit(1)
@@ -102,21 +107,22 @@ for container in containers:
         def backup():
             threading.Thread(
                 target=backup_container,
-                args=(container_name, source_folder, destination_folder, retention_days)
+                args=(container_name, source_folder, destination_folder, retention_days),
             ).start()
-            return jsonify({'status': 'Backup started', 'container': container_name}), 202
+            return jsonify({"status": "Backup started", "container": container_name}), 202
+
         return backup
 
-    endpoint = f'/backup/{container_name}'
+    endpoint = f"/backup/{container_name}"
     app.add_url_rule(
         endpoint,
         endpoint,
         create_backup_endpoint(container_name, source_folder, destination_folder, retention_days),
-        methods=['POST']
+        methods=["POST"],
     )
 
 
-@app.route('/backup', methods=['POST'])
+@app.route("/backup", methods=["POST"])
 def backup_all():
     def run_all():
         errors = []
@@ -129,7 +135,7 @@ def backup_all():
                 container["container_name"],
                 container["source_folder"],
                 container["destination_folder"],
-                container["retention_days"]
+                container["retention_days"],
             )
             with lock:
                 if success:
@@ -143,7 +149,7 @@ def backup_all():
             t.start()
 
         spoke_threads = []
-        if MODE == 'hub':
+        if MODE == "hub":
             for spoke in spokes:
                 t = threading.Thread(target=notify_spoke, args=(spoke["url"],))
                 spoke_threads.append(t)
@@ -156,18 +162,17 @@ def backup_all():
         write_result(status, errors, backed_up)
 
     threading.Thread(target=run_all).start()
-    return jsonify({'status': 'Backup started'}), 202
+    return jsonify({"status": "Backup started"}), 202
 
 
-@app.route('/status', methods=['GET'])
+@app.route("/status", methods=["GET"])
 def status():
     local_result = read_local_result()
 
-    if MODE == 'spoke':
-        return jsonify({
-            "overall_status": local_result.get("status", "unknown"),
-            "local": local_result
-        }), 200
+    if MODE == "spoke":
+        return jsonify(
+            {"overall_status": local_result.get("status", "unknown"), "local": local_result}
+        ), 200
 
     # Hub mode -- aggregate all spokes
     spoke_statuses = [get_spoke_status(spoke["url"]) for spoke in spokes]
@@ -181,12 +186,10 @@ def status():
 
     overall = "success" if all(s == "success" for s in all_statuses) else "failed"
 
-    return jsonify({
-        "overall_status": overall,
-        "local": local_result,
-        "spokes": spoke_statuses
-    }), 200
+    return jsonify(
+        {"overall_status": overall, "local": local_result, "spokes": spoke_statuses}
+    ), 200
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=FLASK_PORT)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=FLASK_PORT)
