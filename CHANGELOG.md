@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/zackwag/flask-container-backup/compare/v2.2.0...v2.2.1) (2026-11-11)
+
+
+### Miscellaneous Chores
+
+* **deps:** bump python from 3.14-slim to 3.15-slim ([#11](https://github.com/zackwag/flask-container-backup/issues/11)) ([44a6e1d](https://github.com/zackwag/flask-container-backup/commit/44a6e1d8e589383774319c8af84e0403fe234a0e))
+
 ## [2.2.0](https://github.com/zackwag/flask-container-backup/compare/v2.1.1...v2.2.0) (2026-09-17)
 
 
