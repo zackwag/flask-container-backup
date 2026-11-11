@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2](https://github.com/zackwag/flask-container-backup/compare/v2.2.1...v2.2.2) (2026-11-11)
+
+
+### Miscellaneous Chores
+
+* fix dependabot commit-message prefixes for conventional commits ([#13](https://github.com/zackwag/flask-container-backup/issues/13)) ([64b13e9](https://github.com/zackwag/flask-container-backup/commit/64b13e9cfd77bb7a6266a70b3c7dbaffea3d28f6))
+
 ## [2.2.1](https://github.com/zackwag/flask-container-backup/compare/v2.2.0...v2.2.1) (2026-11-11)
 
 
